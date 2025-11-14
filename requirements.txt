@@ -19,7 +19,6 @@ pyls-spyder==0.4.0
 pyogrio==0.11.1
 PyQt5==5.15.10
 PyQtWebEngine==5.15.6
-pywin32==308
 setuptools==72.1.0
 shapely==2.1.2
 simple-image-download==0.5
