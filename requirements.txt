@@ -9,7 +9,7 @@ kagglehub==0.3.13
 labelImg==1.8.6
 lxml==5.3.0
 matplotlib==3.10.0
-mkl-service==2.4.0
+mkl-service==2.6.0
 opencv-python==4.12.0.88
 polars==1.32.3
 progressbar==2.5
