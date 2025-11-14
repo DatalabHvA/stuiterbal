@@ -123,7 +123,7 @@ def draw_tree_with_path(model, features, x_row):
             label = f"stuiters = {tree.value[nid][0][0]:.1f}"
         else:
             feat = features[tree.feature[nid]]
-            label = bin_namen.get(feat, f"{feat} ≤ {tree.threshold[nid]:.1f}")
+            label = bin_namen.get(feat, f"{feat} > {tree.threshold[nid]:.1f}")
         ax.text(x, y, label, ha="center", va="center", fontsize=10,
                 bbox=dict(boxstyle="round,pad=0.35", facecolor="#FFD6D6" if nid in path_nodes else "#E6F0FE",
                          edgecolor="black", linewidth=1.0), zorder=4)
