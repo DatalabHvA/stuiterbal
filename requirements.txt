@@ -1,4 +1,5 @@
 geopandas==1.1.1
+joblib==1.4.2
 jsonpointer==2.1
 kaggle==1.7.4.5
 kagglehub==0.3.13
