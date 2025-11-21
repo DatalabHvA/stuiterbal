@@ -3,12 +3,14 @@ import joblib
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
+import requests
 from pathlib import Path
 from sklearn.linear_model import LinearRegression
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.tree import DecisionTreeRegressor
 
 st.set_page_config(page_title="Stuiterbal Demo", layout="wide")
+github_token = st.secrets["api_keys"]["gh_token"]
 
 # ============================================================================
 # CONSTANTEN
@@ -207,6 +209,41 @@ def laad_of_init_state():
     st.session_state.model_lm = model_lm
     st.session_state.model_rf = model_rf
     st.session_state.model_dt = model_dt
+    
+def upload_bounce_data(API_TOKEN, df):
+    OWNER = "DatalabHvA"
+    REPO = "stuiterbal"
+    FILE_PATH = "bounce_data.csv"
+    
+    csv_text = df.to_csv(index=False)
+    csv_bytes = csv_text.encode("utf-8")
+    content_b64 = base64.b64encode(csv_bytes).decode()
+
+    headers = {
+            "Authorization": f"Bearer {API_TOKEN}",
+            "Accept": "application/vnd.github+json",
+            "Cache-Control": "no-cache",
+            "Pragma": "no-cache"
+            }
+
+    url = f"https://api.github.com/repos/{OWNER}/{REPO}/contents/{FILE_PATH}"
+
+    r = requests.get(url, headers=headers)
+    if r.status_code == 200:
+        sha = r.json()["sha"]
+    else:
+        sha = None  # nieuw bestand
+    
+    payload = {
+        "message": "Update CSV via API " + datetime.now().strftime("%d-%m-%Y, %H:%M:%S"),
+        "content": content_b64,
+    }
+    
+    if sha:
+        payload["sha"] = sha
+    
+    response = requests.put(url, headers=headers, json=payload)
+    return response.status_code
 
 # ============================================================================
 # APP
