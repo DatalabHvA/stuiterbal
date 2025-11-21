@@ -4,10 +4,12 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 import requests
+from datetime import datetime
 from pathlib import Path
 from sklearn.linear_model import LinearRegression
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.tree import DecisionTreeRegressor
+import base64
 
 st.set_page_config(page_title="Stuiterbal Demo", layout="wide")
 github_token = st.secrets["api_keys"]["gh_token"]
@@ -122,7 +124,7 @@ def draw_tree_with_path(model, features, x_row):
     for nid, (x, y) in pos.items():
         l, r = tree.children_left[nid], tree.children_right[nid]
         if l == r == -1:
-            label = f"stuiters = {tree.value[nid][0][0]:.1f}"
+            label = f"{tree.value[nid][0][0]:.0f}"
         else:
             feat = features[tree.feature[nid]]
             label = bin_namen.get(feat, f"{feat} ≥ {tree.threshold[nid]:.1f}")
@@ -165,7 +167,7 @@ def werk_modellen_bij(hoogte_m, ondergrond_lbl, bal_lbl, gemeten_stuiters):
     bal_st, bal_te, bal_pi = encode_bal(bal_lbl)
     nieuwe_rij = pd.DataFrame([[hoogte_m, encode_ondergrond(ondergrond_lbl), bal_st, bal_te, bal_pi, gemeten_stuiters]],
                               columns=KENMERKEN + ["stuiters"])
-    st.session_state.data = pd.concat([st.session_state.data, nieuwe_rij], ignore_index=True)
+    st.session_state.data = pd.concat([st.session_state.data, nieuwe_rij], ignore_index=True)    
     
     X, y = st.session_state.data[KENMERKEN], st.session_state.data["stuiters"]
     st.session_state.model_lm.fit(X, y)
@@ -181,6 +183,9 @@ def laad_of_init_state():
     if "model_version" not in st.session_state:
         st.session_state.model_version = 0
     
+    if "last_update" not in st.session_state:
+        st.session_state.last_update = datetime.now()
+        
     if "data" not in st.session_state:
         if Path("bounce_data.csv").exists():
             df = pd.read_csv("bounce_data.csv")
@@ -297,6 +302,13 @@ if st.button("Model bijwerken", type="primary"):
     werk_modellen_bij(hoogte_m, ondergrond_lbl, bal_lbl, gemeten_stuiters)
     st.session_state.model_version += 1
     st.success("✅ Modellen bijgewerkt!")
+    print(f"Timediff = {(datetime.now() - st.session_state.last_update).total_seconds()}")
+    if ((datetime.now() - st.session_state.last_update).total_seconds() > 60):
+        upload_bounce_data(st.secrets["api_keys"]["gh_token"], st.session_state.data)
+        print("Upload csv to GitHub")
+        st.session_state.last_update = datetime.now()
+
+
     st.rerun()
 
 # Formule
