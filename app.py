@@ -254,6 +254,8 @@ def upload_bounce_data(API_TOKEN, df):
 # APP
 # ============================================================================
 st.title("🏀 Stuiterbal Experiment Demo")
+st.divider()
+
 
 with st.sidebar:
     st.header("⚙️ Instellingen")
@@ -265,8 +267,6 @@ with st.sidebar:
 laad_of_init_state()
 
 col1, col2 = st.columns([1,1])
-
-st.divider()
 
 with col1:
 
