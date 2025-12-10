@@ -335,6 +335,7 @@ with col2:
 # Data met verwijder-knoppen
 st.divider()
 st.header("📊 Gegevens (training set)")
+st.caption(f"Er zijn {len(st.session_state.data)} metingen gedaan.")
 if st.session_state.data.empty:
     st.write("Nog geen metingen opgeslagen.")
 else:
@@ -355,4 +356,4 @@ else:
             st.rerun()
 
 st.caption("📁 bounce_data.csv, bounce_model_lm.pkl, bounce_model_rf.pkl, bounce_model_dt.pkl")
-exit()
+#exit()
