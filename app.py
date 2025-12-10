@@ -264,68 +264,73 @@ with st.sidebar:
 
 laad_of_init_state()
 
-# Invoer
-st.subheader("Experiment parameters")
-c1, c2, c3 = st.columns([2, 1, 1])
-with c1: hoogte_m = st.slider("Valhoogte (meter)", 0.1, 3.0, 1.0, 0.1)
-with c2: ondergrond_lbl = st.selectbox("Ondergrond", ONDERGRONDEN, index=0)
-with c3: bal_lbl = st.selectbox("Baltype", BAL_TYPES, index=0)
+col1, col2 = st.columns([1,1])
 
-bal_st, bal_te, bal_pi = encode_bal(bal_lbl)
-x_row = np.array([[hoogte_m, encode_ondergrond(ondergrond_lbl), bal_st, bal_te, bal_pi]], dtype=float)
+with col1:
 
-# Voorspellingen
-st.subheader("Voorspellingen")
-lm_ready = _is_fitted_lm(st.session_state.model_lm)
-rf_ready = _is_fitted_rf(st.session_state.model_rf)
-dt_ready = _is_fitted_dt(st.session_state.model_dt)
+    # Invoer
+    st.subheader("Experiment parameters")
+    c1, c2, c3 = st.columns([2, 1, 1])
+    with c1: hoogte_m = st.slider("Valhoogte (meter)", 0.1, 3.0, 1.0, 0.1)
+    with c2: ondergrond_lbl = st.selectbox("Ondergrond", ONDERGRONDEN, index=0)
+    with c3: bal_lbl = st.selectbox("Baltype", BAL_TYPES, index=0)
 
-if lm_ready and rf_ready and dt_ready:
-    y_lm = st.session_state.model_lm.predict(x_row)[0]
-    y_rf = st.session_state.model_rf.predict(x_row)[0]
-    y_dt = st.session_state.model_dt.predict(x_row)[0]
-    c1, c2, c3 = st.columns(3)
-    c1.metric("Lineair model", f"{int(round(y_lm))} stuiters")
-    c2.metric("Beslisboom", f"{int(round(y_dt))} stuiters")
-    c3.metric("Random Forest", f"{int(round(y_rf))} stuiters")
-else:
-    st.warning("⚠️ Model nog niet getraind. Voeg minimaal 2 metingen toe.")
+    bal_st, bal_te, bal_pi = encode_bal(bal_lbl)
+    x_row = np.array([[hoogte_m, encode_ondergrond(ondergrond_lbl), bal_st, bal_te, bal_pi]], dtype=float)
 
-# Nieuwe meting
-st.divider()
-st.subheader("Nieuwe meting toevoegen")
-c1, c2 = st.columns([1, 1])
-with c1: gemeten_stuiters = st.number_input("Gemeten aantal stuiters", min_value=0, step=1, format="%d", value=0)
-with c2: st.info("💡 Varieer hoogte, ondergrond en bal om het model te leren.")
+    # Voorspellingen
+    st.subheader("Voorspellingen")
+    lm_ready = _is_fitted_lm(st.session_state.model_lm)
+    rf_ready = _is_fitted_rf(st.session_state.model_rf)
+    dt_ready = _is_fitted_dt(st.session_state.model_dt)
 
-if st.button("Model bijwerken", type="primary"):
-    werk_modellen_bij(hoogte_m, ondergrond_lbl, bal_lbl, gemeten_stuiters)
-    st.session_state.model_version += 1
-    st.success("✅ Modellen bijgewerkt!")
-    print(f"Timediff = {(datetime.now() - st.session_state.last_update).total_seconds()}")
-    if ((datetime.now() - st.session_state.last_update).total_seconds() > 60):
-        upload_bounce_data(st.secrets["api_keys"]["gh_token"], st.session_state.data)
-        print("Upload csv to GitHub")
-        st.session_state.last_update = datetime.now()
+    if lm_ready and rf_ready and dt_ready:
+        y_lm = st.session_state.model_lm.predict(x_row)[0]
+        y_rf = st.session_state.model_rf.predict(x_row)[0]
+        y_dt = st.session_state.model_dt.predict(x_row)[0]
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Lineair model", f"{int(round(y_lm))} stuiters")
+        c2.metric("Beslisboom", f"{int(round(y_dt))} stuiters")
+        c3.metric("Random Forest", f"{int(round(y_rf))} stuiters")
+    else:
+        st.warning("⚠️ Model nog niet getraind. Voeg minimaal 2 metingen toe.")
+
+    # Nieuwe meting
+    st.divider()
+    st.subheader("Nieuwe meting toevoegen")
+    c1, c2 = st.columns([1, 1])
+    with c1: gemeten_stuiters = st.number_input("Gemeten aantal stuiters", min_value=0, step=1, format="%d", value=0)
+    with c2: st.info("💡 Varieer hoogte, ondergrond en bal om het model te leren.")
+
+    if st.button("Model bijwerken", type="primary"):
+        werk_modellen_bij(hoogte_m, ondergrond_lbl, bal_lbl, gemeten_stuiters)
+        st.session_state.model_version += 1
+        st.success("✅ Modellen bijgewerkt!")
+        print(f"Timediff = {(datetime.now() - st.session_state.last_update).total_seconds()}")
+        if ((datetime.now() - st.session_state.last_update).total_seconds() > 60):
+            upload_bounce_data(st.secrets["api_keys"]["gh_token"], st.session_state.data)
+            print("Upload csv to GitHub")
+            st.session_state.last_update = datetime.now()
 
 
-    st.rerun()
+        st.rerun()
 
-# Formule
-st.divider()
-st.header("📐 Formule lineaire regressie")
-st.latex(lineaire_formule_tex(st.session_state.model_lm, KENMERKEN))
-st.write(lineaire_formule_uitschrift(st.session_state.model_lm))
+    # Formule
+    st.divider()
+    st.header("📐 Formule lineaire regressie")
+    st.latex(lineaire_formule_tex(st.session_state.model_lm, KENMERKEN))
+    st.write(lineaire_formule_uitschrift(st.session_state.model_lm))
 
-# Beslisboom
-st.divider()
-st.header("🌳 Beslisboom")
-if dt_ready:
-    st.pyplot(draw_tree_with_path(st.session_state.model_dt, KENMERKEN, x_row), use_container_width=True)
-    leaf_id = st.session_state.model_dt.apply(x_row)[0]
-    st.caption(f"🎯 Pad eindigt bij blad {leaf_id} ({st.session_state.model_dt.tree_.value[leaf_id][0][0]:.1f} stuiters)")
-else:
-    st.info("ℹ️ De beslisboom is nog niet getraind.")
+with col2: 
+    # Beslisboom
+    st.divider()
+    st.header("🌳 Beslisboom")
+    if dt_ready:
+        st.pyplot(draw_tree_with_path(st.session_state.model_dt, KENMERKEN, x_row), use_container_width=True)
+        leaf_id = st.session_state.model_dt.apply(x_row)[0]
+        st.caption(f"🎯 Pad eindigt bij blad {leaf_id} ({st.session_state.model_dt.tree_.value[leaf_id][0][0]:.1f} stuiters)")
+    else:
+        st.info("ℹ️ De beslisboom is nog niet getraind.")
 
 # Data met verwijder-knoppen
 st.divider()
