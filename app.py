@@ -59,12 +59,7 @@ def lineaire_formule_tex(model_lm, features):
     line1 = fr"aantal\ stuiters &= {intercept:.1f}" + (f" + {line1_terms}" if line1_terms else "")
     line2 = fr" &\quad {line2_terms}" if line2_terms else ""
 
-    latex_block = fr"""
-    \begin{aligned}
-    {line1} \\
-    {line2}
-    \end{aligned}
-    """
+    latex_block = latex_block = r"\begin{aligned}" + "\n" + " \\\n".join([line1,line2]) + "\n" + r"\end{aligned}"
 
     return latex_block
 
