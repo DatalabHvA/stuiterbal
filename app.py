@@ -50,20 +50,6 @@ def lineaire_formule_tex(model_lm, features):
     if coef is None or intercept is None:
         return r"\text{Lineair model nog niet getraind.}"
     termen = [f"{coef[i]:.1f}\\cdot\\mathrm{{{features[i]}}}" for i in range(len(features))]
-
-    mid = len(termen) // 2
-
-    line1_terms = " + ".join(termen[:mid])
-    line2_terms = " + ".join(termen[mid:])
-
-    line1 = fr"aantal\ stuiters &= {intercept:.1f}" + (f" + {line1_terms}" if line1_terms else "")
-    line2 = fr" &\quad {line2_terms}" if line2_terms else ""
-
-    latex_block = latex_block = r"\begin{aligned}" + "\n" + " \\\n".join([line1,line2]) + "\n" + r"\end{aligned}"
-
-    return latex_block
-
-
     return r"aantal\ stuiters = " + f"{intercept:.1f} + " + (" + ".join(termen) if termen else "0")
 
 def lineaire_formule_uitschrift(model_lm):
@@ -329,12 +315,6 @@ with col1:
 
         st.rerun()
 
-    # Formule
-    st.divider()
-    st.header("📐 Formule lineaire regressie")
-    st.latex(lineaire_formule_tex(st.session_state.model_lm, KENMERKEN))
-    st.write(lineaire_formule_uitschrift(st.session_state.model_lm))
-
 with col2: 
     # Beslisboom
     st.divider()
@@ -345,6 +325,12 @@ with col2:
         st.caption(f"🎯 Pad eindigt bij blad {leaf_id} ({st.session_state.model_dt.tree_.value[leaf_id][0][0]:.1f} stuiters)")
     else:
         st.info("ℹ️ De beslisboom is nog niet getraind.")
+
+# Formule
+st.divider()
+st.header("📐 Formule lineaire regressie")
+st.latex(lineaire_formule_tex(st.session_state.model_lm, KENMERKEN))
+st.write(lineaire_formule_uitschrift(st.session_state.model_lm))
 
 # Data met verwijder-knoppen
 st.divider()
