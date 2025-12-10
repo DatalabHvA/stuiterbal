@@ -56,8 +56,10 @@ def lineaire_formule_uitschrift(model_lm):
     if not _is_fitted_lm(model_lm): return "Het lineaire model is nog niet getraind."
     b0 = model_lm.intercept_
     b_h, b_hard, b_st, b_te, b_pi = model_lm.coef_
-    return (f"Basis: {b0:.1f} stuiters. Per meter: {b_h:.1f}. Hard: {b_hard:.1f}. "
-            f"Stuiterbal: {b_st:.1f}. Tennisbal: {b_te:.1f}. Pingpongbal: {b_pi:.1f}.")
+
+    line1 = f"Basis: {b0:.1f} stuiters. Per meter: {b_h:.1f}. Hard: {b_hard:.1f}."
+    line2 = f"Stuiterbal: {b_st:.1f}. Tennisbal: {b_te:.1f}. Pingpongbal: {b_pi:.1f}."
+    return (r"\begin{aligned}" + "\n" + " \\\n".join([line1, line2]) + "\n" + r"\end{aligned}")
 
 # ============================================================================
 # BESLISBOOM
