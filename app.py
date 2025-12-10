@@ -50,16 +50,33 @@ def lineaire_formule_tex(model_lm, features):
     if coef is None or intercept is None:
         return r"\text{Lineair model nog niet getraind.}"
     termen = [f"{coef[i]:.1f}\\cdot\\mathrm{{{features[i]}}}" for i in range(len(features))]
+
+    mid = len(termen) // 2
+
+    line1_terms = " + ".join(termen[:mid])
+    line2_terms = " + ".join(termen[mid:])
+
+    line1 = fr"aantal\ stuiters &= {intercept:.1f}" + (f" + {line1_terms}" if line1_terms else "")
+    line2 = fr" &\quad {line2_terms}" if line2_terms else ""
+
+    latex_block = fr"""
+    \begin{aligned}
+    {line1} \\
+    {line2}
+    \end{aligned}
+    """
+
+    return latex_block
+
+
     return r"aantal\ stuiters = " + f"{intercept:.1f} + " + (" + ".join(termen) if termen else "0")
 
 def lineaire_formule_uitschrift(model_lm):
     if not _is_fitted_lm(model_lm): return "Het lineaire model is nog niet getraind."
     b0 = model_lm.intercept_
     b_h, b_hard, b_st, b_te, b_pi = model_lm.coef_
-
-    line1 = f"Basis: {b0:.1f} stuiters. Per meter: {b_h:.1f}. Hard: {b_hard:.1f}."
-    line2 = f"Stuiterbal: {b_st:.1f}. Tennisbal: {b_te:.1f}. Pingpongbal: {b_pi:.1f}."
-    return (r"\begin{aligned}" + "\n" + " \\\n".join([line1, line2]) + "\n" + r"\end{aligned}")
+    return (f"Basis: {b0:.1f} stuiters. Per meter: {b_h:.1f}. Hard: {b_hard:.1f}. "
+            f"Stuiterbal: {b_st:.1f}. Tennisbal: {b_te:.1f}. Pingpongbal: {b_pi:.1f}.")
 
 # ============================================================================
 # BESLISBOOM
