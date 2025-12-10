@@ -266,6 +266,8 @@ laad_of_init_state()
 
 col1, col2 = st.columns([1,1])
 
+st.divider()
+
 with col1:
 
     # Invoer
@@ -317,7 +319,6 @@ with col1:
 
 with col2: 
     # Beslisboom
-    st.divider()
     st.header("🌳 Beslisboom")
     if dt_ready:
         st.pyplot(draw_tree_with_path(st.session_state.model_dt, KENMERKEN, x_row), use_container_width=True)
