@@ -312,7 +312,7 @@ with col1:
     st.subheader("Jouw experiment")
     c1, c2= st.columns([2, 1])
     with c1: hoogte_m = st.slider("Valhoogte (meter)", 0.1, 3.0, 1.0, 0.1)
-    with c2: bal_lbl = st.selectbox("Baltype", BAL_TYPES, index=0)
+    with c2: bal_lbl = st.radio("Baltype", BAL_TYPES)
 
     bal_st, bal_te, bal_pi = encode_bal(bal_lbl)
     x_row = np.array([[hoogte_m, bal_st, bal_te, bal_pi]], dtype=float)
