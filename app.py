@@ -381,7 +381,7 @@ with col2:
                 st.write(f"De pingpongbal heeft {-coef[4]:.0f} minder stuiters")
 
             #st.latex(lineaire_formule_tex(model, KENMERKEN))
-            st.write(lineaire_formule_uitschrift(model))
+            #st.write(lineaire_formule_uitschrift(model))
         else:
             st.info("ℹ️ Het lineair model is nog niet getraind.")
 
