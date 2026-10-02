@@ -17,9 +17,8 @@ github_token = st.secrets["api_keys"]["gh_token"]
 # ============================================================================
 # CONSTANTEN
 # ============================================================================
-KENMERKEN = ["hoogte_m", "ondergrond_hard", "bal_stuiter", "bal_tennis", "bal_pingpong"]
+KENMERKEN = ["hoogte_m", "bal_stuiter", "bal_tennis", "bal_pingpong"]
 BAL_TYPES = ("Stuiterbal", "Tennisbal", "Pingpongbal", "Zachte bal")
-ONDERGRONDEN = ("Hard", "Zacht")
 
 # ============================================================================
 # HELPERS
@@ -35,13 +34,12 @@ def decode_bal(row):
     return "Stuiterbal" if row["bal_stuiter"]==1 else "Tennisbal" if row["bal_tennis"]==1 else "Pingpongbal" if row["bal_pingpong"]==1 else "Zachte bal"
 
 def encode_ondergrond(lbl): return 1 if lbl == "Hard" else 0
-def decode_ondergrond(v): return "Hard" if int(v) == 1 else "Zacht"
 
 # ============================================================================
 # FORMULES
 # ============================================================================
 def lineaire_formule_tex(model_lm, features):
-    pretty = {"hoogte_m": "hoogte\\ (m)", "ondergrond_hard": "ondergrond\\ (hard=1)", 
+    pretty = {"hoogte_m": "hoogte\\ (m)", 
               "bal_stuiter": "bal\\ (stuiter=1)", "bal_tennis": "bal\\ (tennis=1)", 
               "bal_pingpong": "bal\\ (pingpong=1)"}
     features = [pretty.get(i, i) for i in features]
@@ -55,9 +53,15 @@ def lineaire_formule_tex(model_lm, features):
 def lineaire_formule_uitschrift(model_lm):
     if not _is_fitted_lm(model_lm): return "Het lineaire model is nog niet getraind."
     b0 = model_lm.intercept_
-    b_h, b_hard, b_st, b_te, b_pi = model_lm.coef_
-    return (f"Basis: {b0:.1f} stuiters. Per meter: {b_h:.1f}. Hard: {b_hard:.1f}. "
+    b_h, b_st, b_te, b_pi = model_lm.coef_
+    return (f"Basis: {b0:.1f} stuiters. Per meter: {b_h:.1f}."
             f"Stuiterbal: {b_st:.1f}. Tennisbal: {b_te:.1f}. Pingpongbal: {b_pi:.1f}.")
+
+def lineaire_formule_coef(model_lm):
+    if not _is_fitted_lm(model_lm): return "Het lineaire model is nog niet getraind."
+    b0 = model_lm.intercept_
+    b_h, b_st, b_te, b_pi = model_lm.coef_
+    return (b0, b_h, b_st, b_te, b_pi)
 
 # ============================================================================
 # BESLISBOOM
@@ -99,7 +103,7 @@ def draw_tree_with_path(model, features, x_row):
     fig, ax = plt.subplots(figsize=(10, 6))
     ax.set_axis_off()
     
-    bin_namen = {"ondergrond_hard": "ondergrond hard?", "bal_stuiter": "stuiterbal?",
+    bin_namen = {"bal_stuiter": "stuiterbal?",
                  "bal_tennis": "tennisbal?", "bal_pingpong": "pingpongbal?"}
     
     # Edges
@@ -163,9 +167,9 @@ def verwijder_rij(idx):
             Path(f).unlink(missing_ok=True)
     st.session_state.data.to_csv("bounce_data.csv", index=False)
 
-def werk_modellen_bij(hoogte_m, ondergrond_lbl, bal_lbl, gemeten_stuiters):
+def werk_modellen_bij(hoogte_m, bal_lbl, gemeten_stuiters):
     bal_st, bal_te, bal_pi = encode_bal(bal_lbl)
-    nieuwe_rij = pd.DataFrame([[hoogte_m, encode_ondergrond(ondergrond_lbl), bal_st, bal_te, bal_pi, gemeten_stuiters]],
+    nieuwe_rij = pd.DataFrame([[hoogte_m, bal_st, bal_te, bal_pi, gemeten_stuiters]],
                               columns=KENMERKEN + ["stuiters"])
     st.session_state.data = pd.concat([st.session_state.data, nieuwe_rij], ignore_index=True)    
     
@@ -253,59 +257,76 @@ def upload_bounce_data(API_TOKEN, df):
 # ============================================================================
 # APP
 # ============================================================================
-st.title("🏀 Stuiterbal Experiment Demo")
-st.divider()
 
-
-with st.sidebar:
-    st.header("⚙️ Instellingen")
-    if st.button("🗑️ Reset alles", type="secondary", use_container_width=True):
-        reset_alles()
-        st.success("✅ Alles verwijderd!")
-        st.rerun()
 
 laad_of_init_state()
+
+col1, col2 = st.columns(2)
+with col1:
+    st.title("🏀 Hoe vaak stuitert de bal?")
+    st.write("Kies een bal en een hoogte. Vul in welke bal en hoogte je gekozen hebt. De computer voorspelt hoe vaak de bal stuitert.")
+    st.write("Laat dan de bal vallen en tel hoe vaak hij stuitert. Vul het aantal stuiters in als nieuwe meting.")
+    
+with col2:
+    st.title("Voorspelling")
+
+    # Alle beschikbare modellen met hun "is getraind"-check
+    modellen = {
+        "Lineair model": (st.session_state.model_lm, _is_fitted_lm),
+        "Beslisboom": (st.session_state.model_dt, _is_fitted_dt),
+        "Random Forest": (st.session_state.model_rf, _is_fitted_rf),
+    }
+
+    keuze = st.radio(
+        "Kies een model",
+        options=list(modellen.keys()),
+        horizontal=True,
+    )
+
+    model, is_fitted = modellen[keuze]
+
+
+st.divider()
 
 col1, col2 = st.columns([1,1])
 
 with col1:
+    
+    #st.subheader("Voorspellingen")
+    #lm_ready = _is_fitted_lm(st.session_state.model_lm)
+    #rf_ready = _is_fitted_rf(st.session_state.model_rf)
+    #dt_ready = _is_fitted_dt(st.session_state.model_dt)
 
+    #if lm_ready and rf_ready and dt_ready:
+    #    y_lm = st.session_state.model_lm.predict(x_row)[0]
+    #    y_rf = st.session_state.model_rf.predict(x_row)[0]
+    #    y_dt = st.session_state.model_dt.predict(x_row)[0]
+    #    c1, c2, c3 = st.columns(3)
+    #    c1.metric("Lineair model", f"{int(round(y_lm))} stuiters")
+    #    c2.metric("Beslisboom", f"{int(round(y_dt))} stuiters")
+    #    c3.metric("Random Forest", f"{int(round(y_rf))} stuiters")
+    #else:
+    #    st.warning("⚠️ Model nog niet getraind. Voeg minimaal 2 metingen toe.")
+    
     # Invoer
-    st.subheader("Experiment parameters")
-    c1, c2, c3 = st.columns([2, 1, 1])
+    st.subheader("Jouw experiment")
+    c1, c2= st.columns([2, 1])
     with c1: hoogte_m = st.slider("Valhoogte (meter)", 0.1, 3.0, 1.0, 0.1)
-    with c2: ondergrond_lbl = st.selectbox("Ondergrond", ONDERGRONDEN, index=0)
-    with c3: bal_lbl = st.selectbox("Baltype", BAL_TYPES, index=0)
+    with c2: bal_lbl = st.selectbox("Baltype", BAL_TYPES, index=0)
 
     bal_st, bal_te, bal_pi = encode_bal(bal_lbl)
-    x_row = np.array([[hoogte_m, encode_ondergrond(ondergrond_lbl), bal_st, bal_te, bal_pi]], dtype=float)
+    x_row = np.array([[hoogte_m, bal_st, bal_te, bal_pi]], dtype=float)
 
-    # Voorspellingen
-    st.subheader("Voorspellingen")
-    lm_ready = _is_fitted_lm(st.session_state.model_lm)
-    rf_ready = _is_fitted_rf(st.session_state.model_rf)
-    dt_ready = _is_fitted_dt(st.session_state.model_dt)
-
-    if lm_ready and rf_ready and dt_ready:
-        y_lm = st.session_state.model_lm.predict(x_row)[0]
-        y_rf = st.session_state.model_rf.predict(x_row)[0]
-        y_dt = st.session_state.model_dt.predict(x_row)[0]
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Lineair model", f"{int(round(y_lm))} stuiters")
-        c2.metric("Beslisboom", f"{int(round(y_dt))} stuiters")
-        c3.metric("Random Forest", f"{int(round(y_rf))} stuiters")
-    else:
-        st.warning("⚠️ Model nog niet getraind. Voeg minimaal 2 metingen toe.")
 
     # Nieuwe meting
     st.divider()
     st.subheader("Nieuwe meting toevoegen")
-    c1, c2 = st.columns([1, 1])
-    with c1: gemeten_stuiters = st.number_input("Gemeten aantal stuiters", min_value=0, step=1, format="%d", value=0)
-    with c2: st.info("💡 Varieer hoogte, ondergrond en bal om het model te leren.")
+    #c1, c2 = st.columns([1, 1])
+    gemeten_stuiters = st.number_input("Gemeten aantal stuiters", min_value=0, step=1, format="%d", value=0)
+    #with c2: st.info("💡 Varieer hoogte en bal om het model te leren.")
 
     if st.button("Model bijwerken", type="primary"):
-        werk_modellen_bij(hoogte_m, ondergrond_lbl, bal_lbl, gemeten_stuiters)
+        werk_modellen_bij(hoogte_m, bal_lbl, gemeten_stuiters)
         st.session_state.model_version += 1
         st.success("✅ Modellen bijgewerkt!")
         print(f"Timediff = {(datetime.now() - st.session_state.last_update).total_seconds()}")
@@ -314,24 +335,79 @@ with col1:
             print("Upload csv to GitHub")
             st.session_state.last_update = datetime.now()
 
-
         st.rerun()
 
 with col2: 
-    # Beslisboom
-    st.header("🌳 Beslisboom")
-    if dt_ready:
-        st.pyplot(draw_tree_with_path(st.session_state.model_dt, KENMERKEN, x_row), use_container_width=True)
-        leaf_id = st.session_state.model_dt.apply(x_row)[0]
-        st.caption(f"🎯 Pad eindigt bij blad {leaf_id} ({st.session_state.model_dt.tree_.value[leaf_id][0][0]:.1f} stuiters)")
+
+    st.header(f"Voorspelling van {keuze}")
+    if is_fitted(model):
+        y_pred = model.predict(x_row)[0]
+        st.metric(keuze, f"{int(round(y_pred))} stuiters")
     else:
-        st.info("ℹ️ De beslisboom is nog niet getraind.")
+        st.warning("⚠️ Model nog niet getraind. Voeg minimaal 2 metingen toe.")
+
+    if keuze == "Beslisboom":
+        st.header("🌳 Beslisboom")
+        if is_fitted(model):
+            st.pyplot(draw_tree_with_path(model, KENMERKEN, x_row), use_container_width=True)
+            leaf_id = model.apply(x_row)[0]
+            st.caption(f"🎯 Pad eindigt bij blad {leaf_id} ({model.tree_.value[leaf_id][0][0]:.1f} stuiters)")
+        else:
+            st.info("ℹ️ De beslisboom is nog niet getraind.")
+
+    elif keuze == "Lineair model":
+        st.header("📐 Formule lineaire regressie")
+        if is_fitted(model):
+            coef = lineaire_formule_coef(model)
+            st.write(f"We beginnen met {coef[0]:.0f} stuiters voor de zachte bal")
+            if coef[1] >= 0:
+                st.write(f"Voor iedere extra meter zijn er {coef[1]:.0f} extra stuiters")
+            else:
+                st.write(f"Voor iedere extra meter zijn er {-coef[1]:.0f} minder stuiters")
+
+            if coef[2] >= 0:
+                st.write(f"De stuiterbal heeft {coef[2]:.0f} extra stuiters")
+            else:
+                st.write(f"De stuiterbal heeft {-coef[2]:.0f} minder stuiters")
+
+            if coef[3] >= 0:
+                st.write(f"De tennisbal heeft {coef[3]:.0f} extra stuiters")
+            else:
+                st.write(f"De tennisbal heeft {-coef[3]:.0f} minder stuiters")
+
+            if coef[4] >= 0:
+                st.write(f"De pingpongbal heeft {coef[4]:.0f} extra stuiters")
+            else:
+                st.write(f"De pingpongbal heeft {-coef[4]:.0f} minder stuiters")
+
+            #st.latex(lineaire_formule_tex(model, KENMERKEN))
+            st.write(lineaire_formule_uitschrift(model))
+        else:
+            st.info("ℹ️ Het lineair model is nog niet getraind.")
+
+    elif keuze == "Random Forest":
+        st.header("🌲 Random Forest")
+        st.write("Een random forest bestaat uit een groot aantal beslisbomen.")
+        st.write("Elke boom wordt getraind op een willekeurige selectie van de metingen.")
+        st.write("De uiteindelijke voorspelling is het gemiddelde van alle bomen.")
+    
+    
+    
+    
+    # Beslisboom
+    #st.header("🌳 Beslisboom")
+    #if dt_ready:
+    #    st.pyplot(draw_tree_with_path(st.session_state.model_dt, KENMERKEN, x_row), use_container_width=True)
+    #    leaf_id = st.session_state.model_dt.apply(x_row)[0]
+    #    st.caption(f"🎯 Pad eindigt bij blad {leaf_id} ({st.session_state.model_dt.tree_.value[leaf_id][0][0]:.1f} stuiters)")
+    #else:
+    #    st.info("ℹ️ De beslisboom is nog niet getraind.")
 
 # Formule
-st.divider()
-st.header("📐 Formule lineaire regressie")
-st.latex(lineaire_formule_tex(st.session_state.model_lm, KENMERKEN))
-st.write(lineaire_formule_uitschrift(st.session_state.model_lm))
+#st.divider()
+#st.header("📐 Formule lineaire regressie")
+#st.latex(lineaire_formule_tex(st.session_state.model_lm, KENMERKEN))
+#st.write(lineaire_formule_uitschrift(st.session_state.model_lm))
 
 # Data met verwijder-knoppen
 st.divider()
@@ -342,19 +418,49 @@ if st.session_state.data.empty:
 else:
     df = st.session_state.data.copy()
     df["Hoogte (m)"] = df["hoogte_m"].round(1)
-    df["Ondergrond"] = df["ondergrond_hard"].apply(decode_ondergrond)
     df["Baltype"] = df.apply(decode_bal, axis=1)
     df["Stuiters"] = df["stuiters"].astype(int)
     
     for idx, row in df.iterrows():
-        col1, col2, col3, col4, col5 = st.columns([2, 2, 2, 2, 1])
+        col1, col2, col3, col4 = st.columns([2, 2, 2, 1])
         col1.write(f"**{row['Hoogte (m)']} m**")
-        col2.write(row['Ondergrond'])
-        col3.write(row['Baltype'])
-        col4.write(f"{row['Stuiters']} stuiters")
-        if col5.button("🗑️", key=f"del_{idx}"):
+        col2.write(row['Baltype'])
+        col3.write(f"{row['Stuiters']} stuiters")
+        if col4.button("🗑️", key=f"del_{idx}"):
             verwijder_rij(idx)
             st.rerun()
+
+with st.sidebar:
+    st.header("⚙️ Instellingen")
+    if st.button("🗑️ Reset alles", type="secondary", use_container_width=True):
+        reset_alles()
+        st.success("✅ Alles verwijderd!")
+        st.rerun()
+
+    st.header("📊 Samenvatting")
+
+    if st.session_state.data.empty:
+        st.info("Nog geen metingen. Voeg er een paar toe!")
+    else:
+        # De basis
+        st.metric("Aantal metingen", len(df))
+        st.metric("Hoogste aantal stuiters", int(df["Stuiters"].max()))
+        st.metric("Gemiddeld aantal stuiters", f"{df['Stuiters'].mean():.1f}")
+
+        st.divider()
+
+        # Leuke extra's
+        st.subheader("Leuke weetjes")
+
+        populairste = df["Baltype"].value_counts().idxmax()
+        st.write(f"**Meest gebruikte bal:** {populairste}")
+
+        gemiddelden = df.groupby("Baltype")["Stuiters"].mean().nlargest(3)
+        medailles = ["🥇", "🥈", "🥉"]
+
+        st.write("**Beste ballen (gem. aantal stuiters):**")
+        for medaille, (baltype, gemiddelde) in zip(medailles, gemiddelden.items()):
+            st.write(f"{medaille} {baltype}: {gemiddelde:.0f} stuiters")
 
 st.caption("📁 bounce_data.csv, bounce_model_lm.pkl, bounce_model_rf.pkl, bounce_model_dt.pkl")
 #exit()
