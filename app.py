@@ -1,5 +1,4 @@
 import streamlit as st
-import joblib
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
@@ -144,8 +143,7 @@ def draw_tree_with_path(model, features, x_row):
 # STATE MANAGEMENT
 # ============================================================================
 def reset_alles():
-    for f in ["bounce_data.csv", "bounce_model_lm.pkl", "bounce_model_rf.pkl", "bounce_model_dt.pkl"]:
-        Path(f).unlink(missing_ok=True)
+    Path("bounce_data.csv").unlink(missing_ok=True)
     for key in list(st.session_state.keys()):
         del st.session_state[key]
 
@@ -156,15 +154,10 @@ def verwijder_rij(idx):
         st.session_state.model_lm.fit(X, y)
         st.session_state.model_rf.fit(X, y)
         st.session_state.model_dt.fit(X, y)
-        joblib.dump(st.session_state.model_lm, "bounce_model_lm.pkl")
-        joblib.dump(st.session_state.model_rf, "bounce_model_rf.pkl")
-        joblib.dump(st.session_state.model_dt, "bounce_model_dt.pkl")
     else:
         st.session_state.model_lm = LinearRegression()
         st.session_state.model_rf = RandomForestRegressor(n_estimators=200, random_state=42)
         st.session_state.model_dt = DecisionTreeRegressor(max_depth=4, random_state=42)
-        for f in ["bounce_model_lm.pkl", "bounce_model_rf.pkl", "bounce_model_dt.pkl"]:
-            Path(f).unlink(missing_ok=True)
     st.session_state.data.to_csv("bounce_data.csv", index=False)
 
 def werk_modellen_bij(hoogte_m, bal_lbl, gemeten_stuiters):
@@ -177,10 +170,6 @@ def werk_modellen_bij(hoogte_m, bal_lbl, gemeten_stuiters):
     st.session_state.model_lm.fit(X, y)
     st.session_state.model_rf.fit(X, y)
     st.session_state.model_dt.fit(X, y)
-    
-    joblib.dump(st.session_state.model_lm, "bounce_model_lm.pkl")
-    joblib.dump(st.session_state.model_rf, "bounce_model_rf.pkl")
-    joblib.dump(st.session_state.model_dt, "bounce_model_dt.pkl")
     st.session_state.data.to_csv("bounce_data.csv", index=False)
 
 def laad_of_init_state():
@@ -204,21 +193,23 @@ def laad_of_init_state():
         else:
             st.session_state.data = pd.DataFrame(columns=KENMERKEN + ["stuiters"])
     
-    model_lm = joblib.load("bounce_model_lm.pkl") if Path("bounce_model_lm.pkl").exists() else LinearRegression()
-    model_rf = joblib.load("bounce_model_rf.pkl") if Path("bounce_model_rf.pkl").exists() else RandomForestRegressor(n_estimators=200, random_state=42)
-    model_dt = joblib.load("bounce_model_dt.pkl") if Path("bounce_model_dt.pkl").exists() else DecisionTreeRegressor(max_depth=4, random_state=42)
-    
-    df = st.session_state.data
-    if len(df) >= 2:
-        X, y = df[KENMERKEN], df["stuiters"]
-        if not _is_fitted_lm(model_lm): model_lm.fit(X, y)
-        if not _is_fitted_rf(model_rf): model_rf.fit(X, y)
-        if not _is_fitted_dt(model_dt): model_dt.fit(X, y)
-    
-    st.session_state.model_lm = model_lm
-    st.session_state.model_rf = model_rf
-    st.session_state.model_dt = model_dt
-    
+    if "model_lm" not in st.session_state:
+        model_lm = LinearRegression()
+        model_rf = RandomForestRegressor(n_estimators=200, random_state=42)
+        model_dt = DecisionTreeRegressor(max_depth=4, random_state=42)
+
+        df = st.session_state.data
+        if len(df) >= 2:
+            X, y = df[KENMERKEN], df["stuiters"]
+            model_lm.fit(X, y)
+            model_rf.fit(X, y)
+            model_dt.fit(X, y)
+
+        st.session_state.model_lm = model_lm
+        st.session_state.model_rf = model_rf
+        st.session_state.model_dt = model_dt
+
+
 def upload_bounce_data(API_TOKEN, df):
     OWNER = "DatalabHvA"
     REPO = "stuiterbal"
@@ -462,5 +453,5 @@ with st.sidebar:
         for medaille, (baltype, gemiddelde) in zip(medailles, gemiddelden.items()):
             st.write(f"{medaille} {baltype}: {gemiddelde:.0f} stuiters")
 
-st.caption("📁 bounce_data.csv, bounce_model_lm.pkl, bounce_model_rf.pkl, bounce_model_dt.pkl")
+st.caption("📁 bounce_data.csv")
 #exit()
